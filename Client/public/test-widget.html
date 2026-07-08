@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShifraAI Widget Test</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #081028; }
+        .instructions {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        code {
+            background: #0b1020;
+            color: #34d399;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ShifraAI Widget Test Page</h1>
+    <div class="instructions">
+        <p>This page loads the ShifraAI assistant widget for testing.</p>
+        <p>To use: replace <code>YOUR_USER_ID</code> in the script tag below with your actual MongoDB user ID (visible in the Builder page embed code).</p>
+        <p>Then open this file directly or serve it on any local port.</p>
+    </div>
+
+    <!-- Replace YOUR_USER_ID with your actual user _id from the Builder page -->
+    <script src="http://localhost:5173/assistant.js" data-user-id="6a2073fdad23e3e1f77500c6"></script>
+</body>
+</html>
