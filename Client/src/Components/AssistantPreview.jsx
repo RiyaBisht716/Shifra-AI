@@ -131,7 +131,7 @@ const themes = {
 
 function AssistantPreview() {
 
-    const [theme,setTheme]= useState("dark")
+    const [theme,setTheme]= useState("light")
     const current = themes[theme]
   return (
     <div className='flex items-center justify-center px-3 sm:px-4 py-10 sm:py-14'>

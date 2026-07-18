@@ -57,7 +57,7 @@ const userSchema = new mongoose.Schema({
         "glass",
         "neon",
       ],
-      default:"dark"
+      default:"light"
     },
     enableVoice:{
         type:Boolean,

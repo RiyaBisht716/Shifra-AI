@@ -34,6 +34,9 @@ function Builder({user , setUser}) {
 
   const [geminiApiKey , setGeminiApiKey] = useState(user?.geminiApiKey || "")
 
+  const [enableVoice, setEnableVoice] = useState(user?.enableVoice !== undefined ? user.enableVoice : true)
+  const [enableNavigation, setEnableNavigation] = useState(user?.enableNavigation !== undefined ? user.enableNavigation : true)
+
   const [pages, setPages] = useState(user?.pages || []);
 
   const [pageName, setPageName] = useState("");
@@ -102,6 +105,8 @@ function Builder({user , setUser}) {
         businessDescription,
         tone,
         theme,
+        enableVoice,
+        enableNavigation,
         geminiApiKey: geminiApiKey.trim(),
         pages,
       }
@@ -327,6 +332,50 @@ function Builder({user , setUser}) {
                         }`}>{item}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className='mt-6 space-y-4'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <p className='font-semibold text-[#081028]'>Enable Voice</p>
+                  <p className='text-sm text-gray-400'>Speech input and output</p>
+                </div>
+                <button
+                  onClick={() => setEnableVoice(!enableVoice)}
+                  className={`relative w-12 h-7 rounded-full transition-colors duration-300 cursor-pointer ${
+                    enableVoice
+                      ? 'bg-gradient-to-r from-purple-500 to-emerald-500'
+                      : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
+                      enableVoice ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className='flex items-center justify-between'>
+                <div>
+                  <p className='font-semibold text-[#081028]'>Enable Navigation</p>
+                  <p className='text-sm text-gray-400'>Assistant can navigate pages</p>
+                </div>
+                <button
+                  onClick={() => setEnableNavigation(!enableNavigation)}
+                  className={`relative w-12 h-7 rounded-full transition-colors duration-300 cursor-pointer ${
+                    enableNavigation
+                      ? 'bg-gradient-to-r from-purple-500 to-emerald-500'
+                      : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
+                      enableNavigation ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
               </div>
             </div>
 

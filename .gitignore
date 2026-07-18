@@ -1,0 +1,20 @@
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Node modules
+node_modules/
+
+# Environment files and credentials
+.env
+.env.local
+.env.*.local
+Client/.env
+Server/.env
+**/.env
+**/.env.*
+
+# OS metadata
+.DS_Store
+Thumbs.db

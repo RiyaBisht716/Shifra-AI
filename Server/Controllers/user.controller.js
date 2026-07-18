@@ -49,6 +49,8 @@ export const saveAssistant = async (req,res) => {
         businessDescription,
         tone,
         theme,
+        enableVoice,
+        enableNavigation,
         geminiApiKey,
         pages,
         } = req.body
@@ -63,6 +65,8 @@ export const saveAssistant = async (req,res) => {
         user.businessDescription = businessDescription;
         user.tone = tone;
         user.theme = theme;
+        user.enableVoice = enableVoice !== undefined ? enableVoice : true;
+        user.enableNavigation = enableNavigation !== undefined ? enableNavigation : true;
 
         if(geminiApiKey){
             const trimmedKey = geminiApiKey.trim();

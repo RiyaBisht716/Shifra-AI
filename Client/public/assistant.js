@@ -7,7 +7,7 @@
 
     const userId = script?.dataset?.userId
 
-    const theme = "dark"
+    const theme = "light"
 
     let assistantConfig = null
 
@@ -87,6 +87,17 @@
                alt="mic"
                class="shifra-mic-icon"/>
             </button>
+
+            <!-- Text input (hidden by default, shown when voice is disabled) -->
+            <div class="shifra-text-input-wrap" style="display:none;">
+                <input type="text" class="shifra-text-input" placeholder="Type your message..." />
+                <button class="shifra-send-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
     
@@ -161,6 +172,21 @@
     Ask anything about your website.
   `;
 
+        // Handle enableVoice setting
+        const micBtn = popup.querySelector(".shifra-mic");
+        const textInputWrap = popup.querySelector(".shifra-text-input-wrap");
+
+        if (assistantConfig.enableVoice === false) {
+            // Voice disabled: hide mic, show text input
+            micBtn.style.display = "none";
+            textInputWrap.style.display = "flex";
+            status.innerText = "Type your message";
+        } else {
+            // Voice enabled: show mic, hide text input
+            micBtn.style.display = "flex";
+            textInputWrap.style.display = "none";
+            status.innerText = "Tap button to Speak";
+        }
 
     }
 
@@ -195,9 +221,74 @@
             ".shifra-mic"
         );
 
+    const textInput =
+        popup.querySelector(
+            ".shifra-text-input"
+        );
+
+    const sendBtn =
+        popup.querySelector(
+            ".shifra-send-btn"
+        );
 
 
-    // text-speech
+    // Send message to AI (shared by voice and text)
+    const sendToAI = async (text) => {
+        try {
+            status.innerText = "Thinking...";
+
+            const res = await fetch("http://localhost:8000/api/assistant/ask", {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/json",
+                },
+                body: JSON.stringify({
+                    message: text,
+                    userId,
+                    currentPath: window.location.pathname
+                })
+            })
+
+            const data = await res.json()
+            console.log(data)
+
+            if (data.success) {
+
+                if (data.action === "navigate") {
+                    speak(data.response)
+
+                    setTimeout(() => {
+                        window.location.href = data.path
+
+                    }, 1500)
+
+                } else {
+                    speak(data.aiResponse)
+                }
+
+            } else {
+                speak(data.message || "Something went wrong, please try again")
+
+            }
+
+        } catch (error) {
+            console.log(error)
+            speak("AI Server Error")
+
+        }
+    }
+
+
+    // Pre-trigger voice loading
+    if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                window.speechSynthesis.getVoices();
+            };
+        }
+    }
 
     const speak = (text) => {
         window.speechSynthesis.cancel();
@@ -209,12 +300,58 @@
         status.innerText =
             "AI Speaking...";
 
+        // Check if voice is enabled
+        if (assistantConfig && assistantConfig.enableVoice === false) {
+            // Voice disabled: just show text, no speech
+            status.innerText = "Type your message";
+            return;
+        }
+
         const speech = new SpeechSynthesisUtterance(text)
 
-        speech.lang =
-            "hi-IN";
+        // Dynamic language detection
+        const containsHindi = /[\u0900-\u097F]/.test(text);
 
-        speech.rate = 1;
+        if (containsHindi) {
+            speech.lang = "hi-IN";
+        } else {
+            // Hinglish or pure English written in Latin script
+            speech.lang = "en-US";
+        }
+
+        // Try to select premium human-like female voice
+        if (window.speechSynthesis && window.speechSynthesis.getVoices) {
+            const voices = window.speechSynthesis.getVoices();
+            let selectedVoice = null;
+
+            if (speech.lang === "hi-IN") {
+                // Find Hindi female voice
+                selectedVoice = voices.find(v => v.lang.includes("hi-IN") && (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Female") || v.name.includes("Lekha") || v.name.includes("Kalpana")));
+                if (!selectedVoice) selectedVoice = voices.find(v => v.lang.includes("hi-IN"));
+            } else {
+                // Find a standard clean female English voice
+                const femaleKeywords = ["zira", "samantha", "veena", "heera", "hazel", "susan", "female", "google us english", "karen", "moira", "tessa"];
+                selectedVoice = voices.find(v => (v.lang.includes("en-US") || v.lang.includes("en-GB") || v.lang.includes("en-IN")) && 
+                    femaleKeywords.some(keyword => v.name.toLowerCase().includes(keyword))
+                );
+                
+                // Fallback to any en-US/en-GB female voice
+                if (!selectedVoice) {
+                    selectedVoice = voices.find(v => (v.lang.includes("en-US") || v.lang.includes("en-GB")) && v.name.toLowerCase().includes("female"));
+                }
+                
+                // Absolute fallback
+                if (!selectedVoice) {
+                    selectedVoice = voices.find(v => v.lang.includes("en-US") || v.lang.includes("en-GB"));
+                }
+            }
+
+            if (selectedVoice) {
+                speech.voice = selectedVoice;
+            }
+        }
+
+        speech.rate = 0.95; // Slightly slower rate for natural pause simulation
 
         speech.pitch = 1;
 
@@ -223,8 +360,11 @@
         // Voice end
         speech.onend = () => {
 
-            status.innerText =
-                "Tap button to Speak";
+            if (assistantConfig && assistantConfig.enableVoice === false) {
+                status.innerText = "Type your message";
+            } else {
+                status.innerText = "Tap button to Speak";
+            }
 
             wave.style.opacity =
                 "0";
@@ -237,6 +377,27 @@
     }
 
 
+    // Text input handling
+    const handleTextSubmit = () => {
+        const text = textInput.value.trim();
+        if (!text) return;
+
+        userText.innerText = "You: " + text;
+        textInput.value = "";
+        wave.style.opacity = "1";
+
+        sendToAI(text);
+    }
+
+    sendBtn.onclick = handleTextSubmit;
+
+    textInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            handleTextSubmit();
+        }
+    });
+
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
 
 
@@ -245,7 +406,7 @@
         const recognition = new SpeechRecognition();
 
         recognition.lang =
-      "en-US";
+      "en-IN";
 
     recognition.continuous =
       false;
@@ -279,53 +440,9 @@
         recognition.stop();
 
 
-        setTimeout( async () => {
-            try {
-                status.innerText = "Thinking...";
-                
-
-                const res = await fetch("http://localhost:8000/api/assistant/ask" , {
-                    method:"POST",
-                    headers:{
-                        "Content-Type":
-                      "application/json",
-                    } ,
-                    body:JSON.stringify({
-                        message:text,
-                        userId
-                    })
-                })
-
-                const data = await res.json()
-                console.log(data)
-
-                if(data.success){
-
-                    if(data.action === "navigate"){
-                        speak(data.response)
-
-                        setTimeout(()=>{
-                            window.location.href = data.path
-
-                        },1500)
-
-                    }else{
-                        speak(data.aiResponse)
-                    }
-
-                }else{
-                    speak(data.message || "Something went wrong, please try again")
-
-                }
-
-
-
-            } catch (error) {
-                console.log(error)
-                speak("AI Server Error")
-                
-            }
-        },600)
+        setTimeout(() => {
+            sendToAI(text);
+        }, 600);
       };
 
       recognition.onerror = ()=>{
