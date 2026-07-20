@@ -5,8 +5,9 @@
  * 
  * Behavior:
  * - Reads the knowledge file once on first access and caches it in memory.
+ * - Parses markdown into logical chunks to allow smart retrieval.
  * - On subsequent calls, checks the file's last-modified time (mtime).
- *   If the file has been updated, it reloads automatically — no server restart needed.
+ *   If the file has been updated, it reloads automatically.
  * - If the file is missing or unreadable, returns a fallback string gracefully.
  */
 
@@ -14,71 +15,118 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Resolve __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Path to the knowledge file (relative to Server/Configs/ → Server/knowledge/)
 const KNOWLEDGE_FILE_PATH = path.join(__dirname, "..", "knowledge", "projectKnowledge.md");
 
-// In-memory cache
 let cachedContent = null;
-
-// Stores the last known mtime to detect file changes
+let cachedChunks = [];
 let lastModifiedTime = null;
 
-// Fallback message if the knowledge file is missing or unreadable
 const FALLBACK_KNOWLEDGE = `Shifra AI is a voice-enabled AI assistant platform. 
 Users can create custom assistants, configure voice/text settings, 
 and embed them on any website using a single script tag.`;
 
 /**
- * Returns the knowledge file content.
- * - First call: reads the file and caches it.
- * - Subsequent calls: checks mtime and reloads only if the file was modified.
- * - If the file is missing: returns the fallback string without crashing.
- * 
- * @returns {string} The knowledge file content or fallback message.
+ * Ensures knowledge is loaded and up-to-date in memory.
  */
-export const getKnowledge = () => {
+const ensureKnowledgeLoaded = () => {
     try {
-        // Check if the file exists
         if (!fs.existsSync(KNOWLEDGE_FILE_PATH)) {
-            console.warn("[Knowledge] File not found:", KNOWLEDGE_FILE_PATH);
-            return FALLBACK_KNOWLEDGE;
+            if (!cachedContent) {
+                console.warn("[Knowledge] File not found:", KNOWLEDGE_FILE_PATH);
+                cachedContent = FALLBACK_KNOWLEDGE;
+                cachedChunks = [FALLBACK_KNOWLEDGE];
+            }
+            return;
         }
 
-        // Get the file's current modification time
         const stats = fs.statSync(KNOWLEDGE_FILE_PATH);
         const currentMtime = stats.mtimeMs;
 
-        // Reload if: first load OR file was modified since last read
         if (!cachedContent || lastModifiedTime !== currentMtime) {
             cachedContent = fs.readFileSync(KNOWLEDGE_FILE_PATH, "utf-8");
             lastModifiedTime = currentMtime;
+            
+            // Chunking: split by '## ' headers
+            const rawChunks = cachedContent.split('\n## ');
+            cachedChunks = rawChunks.map((c, i) => {
+                return (i === 0 || c.startsWith('#')) ? c : '## ' + c;
+            });
 
-            if (cachedContent === null || lastModifiedTime === null) {
-                // First load
-                console.log("[Knowledge] Loaded projectKnowledge.md into memory.");
-            } else {
-                // Reload after modification
-                console.log("[Knowledge] Reloaded projectKnowledge.md (file was updated).");
-            }
+            console.log(`[Knowledge] Loaded projectKnowledge.md into memory. (${cachedChunks.length} chunks)`);
         }
-
-        return cachedContent;
     } catch (error) {
         console.error("[Knowledge] Error reading knowledge file:", error.message);
-        return FALLBACK_KNOWLEDGE;
+        if (!cachedContent) {
+            cachedContent = FALLBACK_KNOWLEDGE;
+            cachedChunks = [FALLBACK_KNOWLEDGE];
+        }
     }
 };
 
 /**
+ * Returns the full knowledge file content.
+ */
+export const getKnowledge = () => {
+    ensureKnowledgeLoaded();
+    return cachedContent;
+};
+
+/**
+ * Returns only the chunks of knowledge relevant to the given query.
+ * Always includes the Overview and AI Assistant Instructions.
+ * 
+ * @param {string} query The user's message
+ * @returns {string} Concatenated relevant chunks
+ */
+export const getRelevantKnowledge = (query) => {
+    ensureKnowledgeLoaded();
+    
+    if (cachedChunks.length <= 1) return cachedContent; // Fallback
+
+    const queryLower = (query || "").toLowerCase();
+    const tokens = queryLower.split(/\s+/).filter(t => t.length > 2);
+
+    let selectedChunks = new Set();
+    
+    // Chunk 0 is usually the Title + Overview + Purpose
+    selectedChunks.add(cachedChunks[0]);
+
+    // Find and always add the "AI Assistant Instructions" chunk
+    const instructionsChunk = cachedChunks.find(c => c.toLowerCase().includes("ai assistant instructions"));
+    if (instructionsChunk) {
+        selectedChunks.add(instructionsChunk);
+    }
+    
+    // Always add Core Features and Navigation for good baseline context
+    const featuresChunk = cachedChunks.find(c => c.toLowerCase().includes("## core features"));
+    if (featuresChunk) selectedChunks.add(featuresChunk);
+    
+    const navChunk = cachedChunks.find(c => c.toLowerCase().includes("## navigation"));
+    if (navChunk) selectedChunks.add(navChunk);
+
+    // If there's a specific query, score the remaining chunks
+    if (tokens.length > 0) {
+        cachedChunks.forEach(chunk => {
+            const chunkLower = chunk.toLowerCase();
+            let matches = 0;
+            tokens.forEach(token => {
+                if (chunkLower.includes(token)) matches++;
+            });
+            // If we have some keyword overlap, include the chunk
+            if (matches > 0) {
+                selectedChunks.add(chunk);
+            }
+        });
+    }
+
+    return Array.from(selectedChunks).join('\n\n');
+};
+
+/**
  * Preloads the knowledge file into memory.
- * Call this during server startup for eager loading.
  */
 export const preloadKnowledge = () => {
-    const content = getKnowledge();
-    const source = content === FALLBACK_KNOWLEDGE ? "fallback" : "file";
-    console.log(`[Knowledge] Preloaded knowledge from ${source} (${content.length} chars).`);
+    ensureKnowledgeLoaded();
 };

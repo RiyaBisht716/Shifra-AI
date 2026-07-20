@@ -232,6 +232,8 @@
         );
 
 
+    let chatHistory = [];
+
     // Send message to AI (shared by voice and text)
     const sendToAI = async (text) => {
         try {
@@ -246,7 +248,8 @@
                 body: JSON.stringify({
                     message: text,
                     userId,
-                    currentPath: window.location.pathname
+                    currentPath: window.location.pathname,
+                    chatHistory // Pass conversation history to backend
                 })
             })
 
@@ -265,6 +268,15 @@
 
                 } else {
                     speak(data.aiResponse)
+                    
+                    // Update chat history with user and AI messages
+                    chatHistory.push({ role: "user", parts: [{ text }] });
+                    chatHistory.push({ role: "model", parts: [{ text: data.aiResponse }] });
+                    
+                    // Keep only the last 10 messages (5 exchanges)
+                    if (chatHistory.length > 10) {
+                        chatHistory = chatHistory.slice(chatHistory.length - 10);
+                    }
                 }
 
             } else {

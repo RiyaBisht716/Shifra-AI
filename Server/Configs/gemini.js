@@ -2,7 +2,9 @@ const Gemini_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemi
 
 
 export const generateGeminiResponse = async ({
-    prompt,
+    message,
+    systemInstruction,
+    history = [],
     apikey,
     user
 }) => {
@@ -12,23 +14,29 @@ export const generateGeminiResponse = async ({
             throw new Error("Gemini API key missing")
         }
 
+        // Construct contents array with history and the latest user message
+        const contents = [
+            ...history,
+            {
+                role: "user",
+                parts: [{ text: message }]
+            }
+        ];
+
+        const payload = {
+            systemInstruction: {
+                parts: [{ text: systemInstruction }]
+            },
+            contents
+        };
+
         const response = await fetch(`${Gemini_URL}?key=${apikey.trim()}`, {
             method: "POST",
             headers: {
                 "Content-Type":
                     "application/json",
             },
-            body: JSON.stringify({
-                contents: [
-                    {
-                        parts: [
-                            {
-                                text: prompt
-                            }
-                        ]
-                    }
-                ]
-            })
+            body: JSON.stringify(payload)
 
         })
 
