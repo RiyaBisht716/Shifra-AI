@@ -115,7 +115,7 @@ export const askAssistant = async (req, res) => {
                     ) {
                         return res.json({
                             success: true,
-                            response:
+                            aiResponse:
                                 `${matchedPage.name} already open`
                         });
                     }
