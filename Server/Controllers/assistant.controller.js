@@ -1,5 +1,7 @@
 import { generateGeminiResponse } from "../Configs/gemini.js"
 import User from "../Models/user.model.js"
+// Knowledge loader: reads projectKnowledge.md and caches it in memory
+import { getKnowledge } from "../Configs/knowledge.js"
 
 
 export const getAssistantConfig = async (req, res) => {
@@ -134,6 +136,9 @@ export const askAssistant = async (req, res) => {
         // Build pages info for the prompt
         const pagesInfo = allPages.map(p => `- ${p.name}: ${p.path} (keywords: ${p.keywords.join(', ')})`).join('\n');
 
+        // Load the knowledge file content (auto-reloads if file was updated on disk)
+        const knowledgeContent = getKnowledge();
+
         const prompt = `
 
 You are ${user.assistantName}, a professional website assistant for ${user.businessName}.
@@ -150,15 +155,9 @@ ${user.businessDescription}
 Assistant Tone:
 ${user.tone}
 
-About the Platform (Shifra AI):
-Shifra AI is an advanced voice-enabled AI assistant platform. Key features include:
-- Google authentication for instant signup
-- Custom voice assistant settings: customize assistantName, tone (Friendly, Professional, Sales), theme (Dark, Light, Glass, Neon), and voice input/output
-- Training dashboard to personalize responses with business details and custom page navigation
-- Single-line script embedding to add the assistant to any website easily
-- Free plan: 200 AI responses. Pro plan: ₹699 for 3 months of unlimited responses, priority support, and advanced features
-- Uses Gemini AI using the user's own API key
-- Dynamic voice recognition (speech input) and natural speech synthesis (speech output)
+--- PROJECT KNOWLEDGE BASE (Primary Source of Truth) ---
+${knowledgeContent}
+--- END KNOWLEDGE BASE ---
 
 Navigation Pages Configured on this Website:
 ${pagesInfo}
@@ -178,7 +177,7 @@ CRITICAL RULES FOR LANGUAGE & BEHAVIOR:
 4. **Length Constraint**:
    - Keep responses extremely short and concise, strictly between 10 to 20 words (max 25 words). This is crucial for rapid voice playback.
 5. **No Hallucination**:
-   - Only speak about the features and pages listed above. Do not invent pages or features.
+   - Only speak about features and pages documented in the knowledge base above. Do not invent pages or features.
 
 EXAMPLES:
 - User: "shifra iss website ke features batao"

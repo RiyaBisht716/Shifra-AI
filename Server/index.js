@@ -8,6 +8,8 @@ import cors from "cors"
 import userRouter from "./Routes/user.route.js"
 import assistantRouter from "./Routes/assistant.route.js"
 import billingRouter from "./Routes/billing.route.js"
+// Preload the project knowledge file into memory on server startup
+import { preloadKnowledge } from "./Configs/knowledge.js"
 
 
 const app = express()
@@ -45,4 +47,6 @@ const PORT = process.env.PORT || 8000
 app.listen(PORT , ()=>{
     console.log(`Server Started on Port ${PORT}`)
     connectDB()
+    // Eagerly load projectKnowledge.md into cache so it's ready for the first request
+    preloadKnowledge()
 })
