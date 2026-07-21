@@ -20,8 +20,8 @@ export const googleAuth = async (req,res) => {
         // For local development (http://localhost) use SameSite='lax' and secure=false so browsers accept the cookie.
         const isProd = process.env.NODE_ENV === 'production'
         const cookieOptions = {
-            httpOnly: true,
-            secure: isProd, // true in prod (HTTPS), false in dev (localhost)
+            httpOnly: false,
+            secure: true, // true in prod (HTTPS), false in dev (localhost)
             sameSite: isProd ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000
         }
@@ -39,8 +39,8 @@ export const logOut = async (req,res) => {
     try {
         const isProd = process.env.NODE_ENV === 'production'
         await res.clearCookie("token", {
-            httpOnly: true,
-            secure: isProd,
+            httpOnly: false,
+            secure: true,
             sameSite: isProd ? 'none' : 'lax'
         })
          return res.status(200).json({message:"LogOut Sucessfully"})
