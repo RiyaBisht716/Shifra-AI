@@ -18,7 +18,7 @@
 
     link.rel = "stylesheet"
 
-    link.href = "shifra-ai-two.vercel.app/assistant.css"
+    link.href = "https://shifra-ai-two.vercel.app/assistant.css"
 
     document.head.appendChild(link)
 
@@ -83,7 +83,7 @@
             <button class="shifra-mic">
 
                <img 
-               src="shifra-ai-two.vercel.app/mic.svg"
+               src="https://shifra-ai-two.vercel.app/mic.svg"
                alt="mic"
                class="shifra-mic-icon"/>
             </button>
@@ -113,7 +113,7 @@
 
     button.innerHTML = `
     <img 
-    src="shifra-ai-two.vercel.app/logo.png"
+    src="https://shifra-ai-two.vercel.app/logo.png"
     alt="logo"
     />`;
     document.body.appendChild(button)
