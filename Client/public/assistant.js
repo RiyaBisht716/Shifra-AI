@@ -262,7 +262,20 @@
                     speak(data.response)
 
                     setTimeout(() => {
-                        window.location.href = data.path
+                        if (data.pageType === "system") {
+                            // System pages (Builder, Billing, Home) are on Shifra AI's domain
+                            // Open in new tab when on a 3rd-party site, or navigate if already on Shifra AI
+                            const isOnShifraAI = window.location.hostname.includes("shifra-ai") || 
+                                                  window.location.hostname === "localhost";
+                            if (isOnShifraAI) {
+                                window.location.href = data.path
+                            } else {
+                                window.open(data.path, "_blank")
+                            }
+                        } else {
+                            // User-defined pages navigate within the current site
+                            window.location.href = data.path
+                        }
 
                     }, 1500)
 

@@ -57,13 +57,20 @@ export const askAssistant = async (req, res) => {
 
         const cleanMessage = message.toLowerCase()
 
+        // Shifra AI client URL (where the dashboard/builder lives)
+        const SHIFRA_CLIENT_URL = "https://shifra-ai-two.vercel.app"
+
+        // System pages live on Shifra AI's own domain, NOT the customer's website
         const systemPages = [
-            { name: "Home", path: "/", keywords: ["home", "homepage", "dashboard", "main", "start"] },
-            { name: "Builder", path: "/builder", keywords: ["builder", "create", "customize", "edit", "assistant", "settings", "setup"] },
-            { name: "Billing", path: "/billing", keywords: ["billing", "pricing", "plans", "payment", "upgrade", "pro", "subscription"] }
+            { name: "Home", path: "/", keywords: ["home", "homepage", "dashboard", "main", "start"], isSystem: true },
+            { name: "Builder", path: "/builder", keywords: ["builder", "create", "customize", "edit", "assistant", "settings", "setup"], isSystem: true },
+            { name: "Billing", path: "/billing", keywords: ["billing", "pricing", "plans", "payment", "upgrade", "pro", "subscription"], isSystem: true }
         ];
 
-        const allPages = [...systemPages, ...(user.pages || [])];
+        // User-defined pages are on the customer's website (relative paths)
+        const userPages = (user.pages || []).map(p => ({ ...p, isSystem: false }));
+
+        const allPages = [...systemPages, ...userPages];
 
         if (user.enableNavigation) {
 
@@ -95,9 +102,10 @@ export const askAssistant = async (req, res) => {
             // User wants navigation
             if (wantsNavigation) {
 
-                // Find matching page
+                // Find matching page — prioritize user pages over system pages
+                // so customer's own pages take precedence on their site
                 const matchedPage =
-                    allPages.find((page) =>
+                    [...userPages, ...systemPages].find((page) =>
                         page.keywords.some((keyword) =>
                             cleanMessage.includes(
                                 keyword.toLowerCase()
@@ -108,7 +116,14 @@ export const askAssistant = async (req, res) => {
                 // Page found
                 if (matchedPage) {
 
-                    // Already open
+                    // Build the correct navigation path
+                    // System pages → full Shifra AI URL (opens in new tab on 3rd-party sites)
+                    // User pages → relative path (navigates within the customer's site)
+                    const navigationPath = matchedPage.isSystem
+                        ? `${SHIFRA_CLIENT_URL}${matchedPage.path}`
+                        : matchedPage.path;
+
+                    // Already open check
                     if (
                         req.body.currentPath ===
                         matchedPage.path
@@ -124,7 +139,8 @@ export const askAssistant = async (req, res) => {
                     return res.json({
                         success: true,
                         action: "navigate",
-                        path: matchedPage.path,
+                        path: navigationPath,
+                        pageType: matchedPage.isSystem ? "system" : "user",
                         response:
                             `Opening ${matchedPage.name}`,
                     });
