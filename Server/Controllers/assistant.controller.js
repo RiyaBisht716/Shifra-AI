@@ -68,7 +68,7 @@ export const askAssistant = async (req, res) => {
         ];
 
         // User-defined pages are on the customer's website (relative paths)
-        const userPages = (user.pages || []).map(p => ({ ...p, isSystem: false }));
+        const userPages = (user.pages || []).map(p => ({ ...(p.toObject ? p.toObject() : p), isSystem: false }));
 
         const allPages = [...systemPages, ...userPages];
 
